@@ -1,0 +1,5 @@
+{
+  "name": "Receipt Scanner",
+  "description": "Take a photo of a receipt, automatically extract text to formulate a file name, and save an efficiently sized image.",
+  "requestFramePermissions": ["camera"]
+}

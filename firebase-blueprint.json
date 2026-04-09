@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "CompanyList": {
+      "title": "CompanyList",
+      "description": "A list of saved companies synced via a 6-digit PIN",
+      "type": "object",
+      "properties": {
+        "companies": {
+          "type": "array",
+          "description": "List of company statistics",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "maxLength": 100 },
+              "lastUsed": { "type": "number" },
+              "count": { "type": "number" }
+            },
+            "required": ["name", "lastUsed", "count"]
+          },
+          "maxLength": 1000
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Timestamp of the last update"
+        }
+      },
+      "required": ["companies", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/companyLists/{pin}": {
+      "schema": {
+        "$ref": "#/entities/CompanyList"
+      },
+      "description": "Stores company lists keyed by a 6-digit PIN"
+    }
+  }
+}

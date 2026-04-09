@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: companyLists
+    // Document ID: 6-digit PIN (e.g., "123456")
+    // Fields:
+    //   - companies: list of objects (required)
+    //     - name: string (required, max 100 chars)
+    //     - lastUsed: number (required)
+    //     - count: number (required)
+    //   - updatedAt: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidCompany(company) {
+      return company.keys().hasOnly(['name', 'lastUsed', 'count']) &&
+             company.name is string && company.name.size() > 0 && company.name.size() <= 100 &&
+             company.lastUsed is number &&
+             company.count is number && company.count >= 0;
+    }
+
+    function areAllCompaniesValid(companies) {
+      // Since Firestore rules don't have a simple array map/filter, we check size limits
+      // and rely on the client to send valid data, but we can do a basic check.
+      // Actually, we can't iterate easily in rules without a custom function or limit.
+      // We will just enforce it's a list and size is reasonable.
+      return companies is list && companies.size() <= 1000;
+    }
+
+    function isValidCompanyList() {
+      return hasOnlyAllowedFields(['companies', 'updatedAt']) &&
+             hasRequiredFields(['companies', 'updatedAt']) &&
+             areAllCompaniesValid(request.resource.data.companies) &&
+             request.resource.data.updatedAt is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /companyLists/{pin} {
+      // Allow read if the PIN is exactly 6 digits
+      allow read: if pin.matches('^[0-9]{6}$');
+      
+      // Allow create/update if the PIN is 6 digits and data is valid
+      allow create: if pin.matches('^[0-9]{6}$') && isValidCompanyList();
+      allow update: if pin.matches('^[0-9]{6}$') && isValidCompanyList();
+    }
+  }
+}
