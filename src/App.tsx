@@ -42,6 +42,17 @@ const useCompanies = () => {
           setCompanies(data.companies);
           localStorage.setItem('receipt-companies', JSON.stringify(data.companies));
         }
+      } else {
+        // If the cloud document doesn't exist yet, push our local companies up to initialize it
+        setCompanies(prev => {
+          if (prev.length > 0) {
+            setDoc(doc(db, 'companyLists', syncPin), {
+              companies: prev,
+              updatedAt: Date.now()
+            }).catch(err => console.error("Failed to initialize cloud sync:", err));
+          }
+          return prev;
+        });
       }
       setIsSyncing(false);
     }, (err) => {
@@ -65,9 +76,9 @@ const useCompanies = () => {
     const cleanName = name.trim();
     if (!cleanName) return;
     
-    let newCompanies: CompanyStat[] = [];
     setCompanies(prev => {
       const existing = prev.find(c => c.name.toLowerCase() === cleanName.toLowerCase());
+      let newCompanies: CompanyStat[];
       if (existing) {
         newCompanies = prev.map(c => c.name.toLowerCase() === cleanName.toLowerCase() 
           ? { ...c, name: cleanName, lastUsed: Date.now(), count: c.count + 1 } 
@@ -75,24 +86,25 @@ const useCompanies = () => {
       } else {
         newCompanies = [...prev, { name: cleanName, lastUsed: Date.now(), count: 1 }];
       }
+      
       try {
         localStorage.setItem('receipt-companies', JSON.stringify(newCompanies));
       } catch (e) {
         console.error("Failed to save companies", e);
       }
-      return newCompanies;
-    });
 
-    if (syncPin && syncPin.length === 6) {
-      try {
-        await setDoc(doc(db, 'companyLists', syncPin), {
+      if (syncPin && syncPin.length === 6) {
+        // Push the newly calculated list to Firestore
+        setDoc(doc(db, 'companyLists', syncPin), {
           companies: newCompanies,
           updatedAt: Date.now()
+        }).catch(err => {
+          console.error("Failed to sync to cloud:", err);
         });
-      } catch (err) {
-        console.error("Failed to sync to cloud:", err);
       }
-    }
+
+      return newCompanies;
+    });
   };
 
   const sortedCompanies = [...companies].sort((a, b) => {
