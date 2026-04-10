@@ -3,6 +3,9 @@ import { Camera, Check, Loader2, Download, RefreshCw, Image as ImageIcon, Clock,
 import Tesseract from 'tesseract.js';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { parse, format, isValid } from 'date-fns';
 
 interface CompanyStat {
   name: string;
@@ -360,7 +363,7 @@ const CameraView = ({ onCapture }: { onCapture: (file: File) => void }) => {
     if (!stream) return;
     const track = stream.getVideoTracks()[0];
     try {
-      await track.applyConstraints({ advanced: [{ zoom: level }] });
+      await track.applyConstraints({ advanced: [{ zoom: level } as any] });
       setZoomLevel(level);
     } catch (e) {
       console.error("Zoom failed", e);
@@ -456,12 +459,12 @@ export default function App() {
 
   const cleanCompanyName = companyInput.replace(/[^a-zA-Z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '') || 'Receipt';
   
-  // Convert YYYY-MM-DD back to DD-MM-YYYY for the filename
+  // Convert YYYY-MM-DD back to DD MM YYYY for the filename
   let displayDate = ocrDate;
   if (ocrDate && ocrDate.includes('-')) {
     const parts = ocrDate.split('-');
     if (parts.length === 3) {
-      displayDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      displayDate = `${parts[2]} ${parts[1]} ${parts[0]}`;
     }
   }
   
@@ -654,11 +657,19 @@ export default function App() {
 
                     <div className="relative w-full text-left">
                       <label className="text-xs text-neutral-400 uppercase tracking-wider font-semibold mb-1 block">Receipt Date</label>
-                      <input 
-                        type="date" 
-                        value={ocrDate}
-                        onChange={e => setOcrDate(e.target.value)}
-                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all [color-scheme:dark]"
+                      <DatePicker
+                        selected={ocrDate ? parse(ocrDate, 'yyyy-MM-dd', new Date()) : null}
+                        onChange={(date: Date | null) => {
+                          if (date && isValid(date)) {
+                            setOcrDate(format(date, 'yyyy-MM-dd'));
+                          } else {
+                            setOcrDate('');
+                          }
+                        }}
+                        dateFormat="dd MM yyyy"
+                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        placeholderText="DD MM YYYY"
+                        wrapperClassName="w-full"
                       />
                     </div>
 
